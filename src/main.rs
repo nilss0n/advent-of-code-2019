@@ -43,27 +43,100 @@ fn aoc_01() {
     println!("Total fueld required {}", sum2);
 }
 
+fn load_param(p: &Vec<i32>, addr: usize, pmode: i32) -> i32 {
+    if pmode == 0 {
+        let val_addr = p[addr] as usize;
+        p[val_addr]
+    } else {
+        p[addr]
+    }
+}
+
+fn store_param(p: &mut Vec<i32>, param_addr: usize, value: i32) {
+    let addr = p[param_addr] as usize;
+    p[addr] = value;
+}
+
+fn get_input() -> i32 {
+    println!(">: ");
+    let mut buffer = String::new();
+    std::io::stdin().read_line(&mut buffer).expect("Failed");
+    buffer.trim().parse::<i32>().unwrap()
+}
+
+fn get_param_mode(op: i32, param: i32) -> i32 {
+    let ten : i32 = 10;
+    (op / ten.pow((param + 1) as u32)) % 10
+}
+
+fn get_opcode(instruction: i32) -> i32 {
+    instruction % 100
+}
+
 fn evaluate_program(p: &mut Vec<i32>) {
     let mut pc = 0;
-    let mut op = p[pc];
+    let mut instruction = p[pc];
+    let mut op = get_opcode(instruction);
     while op != 99 {
-        let a = p[pc + 1] as usize;
-        let b = p[pc + 2] as usize;
-        let r = p[pc + 3] as usize;
-
         match op {
             1 => {
-                p[r] = p[a] + p[b];
+                let a = load_param(p, pc + 1, get_param_mode(instruction, 1));
+                let b = load_param(p, pc + 2, get_param_mode(instruction, 2));
+                store_param(p, pc + 3, a + b);
+                pc += 4;
             },
             2 => {
-                p[r] = p[a] * p[b];
+                let a = load_param(p, pc + 1, get_param_mode(instruction, 1));
+                let b = load_param(p, pc + 2, get_param_mode(instruction, 2));
+                store_param(p, pc + 3, a * b);
+                pc += 4;
+            },
+            3 => {
+                let input = get_input();
+                println!("Received input: {}", input);
+                store_param(p, pc + 1, input);
+                pc += 2;
+            },
+            4 => {
+                println!(">>>>: {}", load_param(p, pc + 1, get_param_mode(instruction, 1)));
+                pc += 2;
+            },
+            5 => {
+                let val = load_param(p, pc + 1, get_param_mode(instruction, 1));
+                let addr = load_param(p, pc + 2, get_param_mode(instruction, 2));
+                if val != 0 {
+                    pc = addr as usize;
+                } else {
+                    pc += 3;
+                }
+            },
+            6 => {
+                let val = load_param(p, pc + 1, get_param_mode(instruction, 1));
+                let addr = load_param(p, pc + 2, get_param_mode(instruction, 2));
+                if val == 0 {
+                    pc = addr as usize;
+                } else {
+                    pc += 3;
+                }
+            },
+            7 => {
+                let a = load_param(p, pc + 1, get_param_mode(instruction, 1));
+                let b = load_param(p, pc + 2, get_param_mode(instruction, 2));
+                store_param(p, pc + 3, (a < b) as i32);
+                pc += 4;
+            },
+            8 => {
+                let a = load_param(p, pc + 1, get_param_mode(instruction, 1));
+                let b = load_param(p, pc + 2, get_param_mode(instruction, 2));
+                store_param(p, pc + 3, (a == b) as i32);
+                pc += 4;
             },
             _ => {
-
+                println!("Reached a wacky opcode {} at PC={}", op, pc);
             }
         }
-        pc += 4;
-        op = p[pc];
+        instruction = p[pc];
+        op = get_opcode(instruction);
     }
 }
 
@@ -212,8 +285,62 @@ fn aoc_03() {
 
 }
 
+fn digits(n: i32) -> [i32; 6] {
+    let ten: i32 = 10;
+    let mut res = [0; 6];
+    for (i, p) in (0..6).rev().enumerate() {
+        res[i] = (n / ten.pow(p)) % 10
+    };
+    res
+}
+
+fn aoc_04() {
+
+    let mut count = 0;
+    let mut count2 = 0;
+
+    for n in 134564 .. 585159 {
+
+        let digits = digits(n);
+        let increasing = (0..5).map(|i| digits[i] <= digits[i+1]).all(|x| x);
+
+        let has_pair = (0..5).map(|i| digits[i] == digits[i+1]).any(|x| x);
+        let has_exclusive_pair = (0..5).map(|i|
+            (i == 0 || digits[i-1] != digits[i]) && digits[i] == digits[i+1] && (i == 4 || digits[i+2] != digits[i])
+        ).any(|x| x);
+
+
+        //println!("{} => {:?} , {} {}", n, digits, decreasing, has_pair);
+        if increasing && has_pair {
+            count += 1;
+        }
+
+        if increasing && has_exclusive_pair {
+            count2 += 1;
+        }
+    }
+
+    println!("{}", count);
+    println!("{}", count2);
+}
+
+
+fn aoc_05() {
+    // println!("{}", get_param_mode(1102, 1));
+    // println!("{}", get_param_mode(1102, 2));
+    // println!("{}", get_param_mode(2, 1));
+    // println!("{}", get_param_mode(102, 1));
+    // println!("{}", get_param_mode(102, 2));
+
+    let src = lines_from_file("inputs/input_05.txt")[0].clone();
+    let mut p: Vec<i32> = src.split(",").map(|s| s.parse::<i32>().unwrap()).collect();
+    evaluate_program(&mut p);
+}
+
 fn main() {
     //aoc_01();
     //aoc_02();
-    aoc_03();
+    //aoc_03();
+    //aoc_04();
+    aoc_05();
 }
